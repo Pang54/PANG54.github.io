@@ -1,0 +1,2013 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>庞兔AGC</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #FFFFFF;
+            --text-color: #000000;
+            --border-color: #CCCCCC;
+            --info-color: #666666;
+
+            --w-b1: rgba(102, 178, 255, 0.7);
+            --w-b2: rgba(51, 153, 255, 0.6);
+            --w-b3: rgba(0, 128, 255, 0.7);
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #000000;
+                --text-color: #FFFFFF;
+                --border-color: #333333;
+                --info-color: #999999;
+
+                --w-b1: rgba(77, 166, 255, 0.7);
+                --w-b2: rgba(26, 140, 255, 0.6);
+                --w-b3: rgba(0, 115, 230, 0.7);
+            }
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        .bottom-wave-container {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+            filter: blur(60px);
+            transform: translateZ(0);
+        }
+
+        .js-blob {
+            position: absolute;
+            bottom: -200px;
+            left: 0;
+            border-radius: 50% 50% 0 0;
+            transform-origin: center bottom;
+            will-change: transform;
+        }
+
+        .chat-container {
+            flex: 1;
+            min-height: 0;
+            box-sizing: border-box;
+            padding: 160px 40px 120px 40px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            scroll-behavior: smooth;
+            position: relative;
+            z-index: 1;
+            -webkit-mask-image: linear-gradient(to bottom,
+                    transparent 0px,
+                    rgba(0, 0, 0, 0.05) 50px,
+                    rgba(0, 0, 0, 0.2) 100px,
+                    rgba(0, 0, 0, 0.4) 160px,
+                    rgba(0, 0, 0, 0.7) 220px,
+                    black 280px,
+
+                    black calc(100% - 220px),
+                    rgba(0, 0, 0, 0.7) calc(100% - 170px),
+                    rgba(0, 0, 0, 0.4) calc(100% - 120px),
+                    rgba(0, 0, 0, 0.2) calc(100% - 70px),
+                    rgba(0, 0, 0, 0.05) calc(100% - 30px),
+                    transparent 100%);
+            mask-image: linear-gradient(to bottom,
+                    transparent 0px,
+                    rgba(0, 0, 0, 0.05) 50px,
+                    rgba(0, 0, 0, 0.2) 100px,
+                    rgba(0, 0, 0, 0.4) 160px,
+                    rgba(0, 0, 0, 0.7) 220px,
+                    black 280px,
+
+                    black calc(100% - 220px),
+                    rgba(0, 0, 0, 0.7) calc(100% - 170px),
+                    rgba(0, 0, 0, 0.4) calc(100% - 120px),
+                    rgba(0, 0, 0, 0.2) calc(100% - 70px),
+                    rgba(0, 0, 0, 0.05) calc(100% - 30px),
+                    transparent 100%);
+        }
+
+        .message {
+            margin-bottom: 24px;
+            line-height: 1.7;
+            white-space: pre-wrap;
+            word-break: break-word;
+            max-width: 800px;
+            font-size: 1rem;
+            color: var(--text-color);
+
+            border: 1px solid var(--border-color);
+            padding: 16px 20px;
+            border-radius: 20px;
+        }
+
+        .message.user {
+            align-self: flex-end;
+            text-align: left;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.assistant {
+            align-self: flex-start;
+            text-align: left;
+            border-top-left-radius: 4px;
+        }
+
+        .markdown-body {
+            white-space: normal;
+            line-height: 1.7;
+        }
+
+        .markdown-body p {
+            white-space: pre-wrap;
+        }
+
+        .message.assistant p {
+            margin: 0 0 12px 0;
+        }
+
+        .message.assistant p:last-child {
+            margin-bottom: 0;
+        }
+
+        .message.assistant table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 16px 0;
+            font-size: 0.95rem;
+            background: transparent;
+        }
+
+        .message.assistant th,
+        .message.assistant td {
+            border: none;
+            border-bottom: 1px solid var(--border-color);
+            padding: 12px 14px;
+            text-align: left;
+            background: transparent;
+        }
+
+        .message.assistant th {
+            font-weight: 600;
+            color: var(--text-color);
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .message.assistant tr:nth-child(even) {
+            background: transparent;
+        }
+
+        .message.assistant code {
+            background-color: var(--message-bg-user);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'JetBrains Mono', Consolas, monospace;
+            font-size: 0.9em;
+            color: #d14;
+        }
+
+        .message.assistant pre code {
+            background-color: transparent;
+            padding: 0;
+            color: inherit;
+        }
+
+        .message.assistant pre {
+            background-color: #f6f8fa;
+            padding: 16px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 16px 0;
+        }
+
+        .message.assistant blockquote {
+            border-left: 4px solid var(--info-color);
+            margin: 16px 0;
+            padding-left: 16px;
+            color: #666;
+        }
+
+        .message.assistant ul,
+        .message.assistant ol {
+            margin: 12px 0;
+            padding-left: 24px;
+        }
+
+        .message.assistant li {
+            margin-bottom: 6px;
+        }
+
+        .message.assistant.is-typing {
+            background: transparent;
+            border-color: transparent;
+            padding: 16px 0;
+            box-shadow: none;
+        }
+
+        .input-hit-area {
+            flex-shrink: 0;
+            padding: 12px 40px 40px 40px;
+            touch-action: manipulation;
+            width: 100%;
+            max-width: 880px;
+            margin: 0 auto;
+            box-sizing: border-box;
+            cursor: text;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            z-index: 1;
+        }
+
+        .input-visual-border {
+            border-radius: 44px;
+            display: flex;
+            align-items: flex-end;
+            padding: 12px 20px;
+            gap: 12px;
+            position: relative;
+            z-index: 2;
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
+        }
+
+        .model-info {
+            font-size: 0.85rem;
+            color: var(--info-color);
+            text-align: center;
+            pointer-events: auto;
+            user-select: none;
+
+            position: absolute;
+            left: 0;
+            width: 100%;
+            bottom: 40px;
+            z-index: 1;
+            opacity: 0;
+            transform: translateY(-5px);
+            transition: opacity 0.4s ease, transform 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .model-info.show {
+            opacity: 1;
+            transform: translateY(24px);
+        }
+
+        .copyright-link {
+            color: inherit;
+            text-decoration: none;
+            pointer-events: auto;
+            cursor: pointer;
+            padding: 0 8px;
+            font-family: Arial, sans-serif;
+            display: inline-block;
+        }
+
+        textarea {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-color);
+            font-size: 1rem;
+            line-height: 1.5;
+            resize: none;
+            outline: none;
+            padding: 0;
+            margin: 0;
+
+            height: 24px !important;
+            min-height: 24px !important;
+            max-height: 24px !important;
+
+            font-family: inherit;
+            cursor: text;
+            overflow-y: auto !important;
+            box-sizing: border-box;
+        }
+
+        textarea::-webkit-scrollbar {
+            display: none;
+        }
+
+        .send-btn {
+            position: relative;
+            background: transparent;
+            color: var(--text-color);
+            border: none;
+            cursor: pointer;
+            font-size: 1.4rem;
+            padding: 0;
+            margin-bottom: 0px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            outline: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            opacity: 0;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .send-btn::before {
+            content: '';
+            position: absolute;
+            top: -4px;
+            left: -4px;
+            right: -4px;
+            bottom: -4px;
+            border-radius: 50%;
+            background: conic-gradient(from 0deg,
+                    #2c8cff 0%,
+                    #80bfff 15%,
+                    #4777d7 30%,
+                    #66a3ff 45%,
+                    #1a75ff 60%,
+                    #99ccff 75%,
+                    #3399ff 90%,
+                    #2c8cff 100%);
+            transition: top 3s ease-in-out,
+                left 3s ease-in-out,
+                right 3s ease-in-out,
+                bottom 3s ease-in-out,
+                filter 3s ease-in-out,
+                opacity 3s ease-in-out;
+            filter: blur(3px);
+            opacity: 0.8;
+            animation: btnCloudAura 4s linear infinite;
+            z-index: -2;
+        }
+
+        .send-btn:hover::before {
+            top: -14px;
+            left: -14px;
+            right: -14px;
+            bottom: -14px;
+            filter: blur(10px);
+            opacity: 1;
+        }
+
+
+        .send-btn::after {
+            content: '';
+            position: absolute;
+            top: 0px;
+            left: 0px;
+            right: 0px;
+            bottom: 0px;
+            border-radius: 50%;
+            background: transparent;
+            z-index: -1;
+        }
+
+
+        @keyframes btnCloudAura {
+            0% {
+                transform: rotate(0deg) scale(0.95);
+                border-radius: 48% 52% 50% 50% / 50% 50% 48% 52%;
+            }
+
+            50% {
+                transform: rotate(180deg) scale(1.03);
+                border-radius: 52% 48% 50% 50% / 48% 52% 50% 50%;
+            }
+
+            100% {
+                transform: rotate(360deg) scale(0.95);
+                border-radius: 48% 52% 50% 50% / 50% 50% 48% 52%;
+            }
+        }
+
+        .loading-spinner {
+            width: 14px;
+            height: 14px;
+            border: 2px solid var(--text-color);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .message.assistant.is-searching {
+            background: transparent;
+            border-color: transparent;
+            box-shadow: none;
+            padding: 4px 0;
+            margin: 0;
+            min-width: 0;
+        }
+
+        .search-indicator {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            background: linear-gradient(90deg, var(--info-color) 0%, var(--w-b1) 50%, var(--info-color) 100%);
+            background-size: 200% 100%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: sweep 2s linear infinite;
+            line-height: 1.4;
+        }
+
+        .search-stats {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            font-family: 'JetBrains Mono', Consolas, monospace;
+            letter-spacing: 0.5px;
+        }
+
+        @keyframes sweep {
+            0% {
+                background-position: 100% 0;
+            }
+
+            100% {
+                background-position: -100% 0;
+            }
+        }
+
+        .cursor {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-color);
+            animation: blink 1s step-end infinite;
+            vertical-align: middle;
+            margin-left: 4px;
+        }
+
+        .dot-typing {
+            display: inline-flex;
+            gap: 4px;
+            align-items: center;
+            height: 1.5em;
+            vertical-align: middle;
+        }
+
+        .dot-typing::before,
+        .dot-typing::after,
+        .dot-typing span {
+            content: '';
+            display: block;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: var(--text-color);
+            animation: blinkFade 1.4s infinite both;
+        }
+
+        .dot-typing span {
+            animation-delay: 0.2s;
+        }
+
+        .dot-typing::after {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes blinkFade {
+
+            0%,
+            100% {
+                opacity: 0.2;
+            }
+
+            20% {
+                opacity: 1;
+            }
+        }
+
+        @keyframes blink {
+
+            0%,
+            100% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0;
+            }
+        }
+
+        ::-webkit-scrollbar {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+
+            .chat-container,
+            .input-hit-area {
+                padding-left: 20px;
+                padding-right: 20px;
+            }
+        }
+
+        .mic-btn {
+            background: transparent;
+            border: none;
+            color: var(--info-color);
+            width: 24px;
+            height: 24px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-right: 4px;
+            flex-shrink: 0;
+            align-self: center;
+            margin-bottom: 0px;
+            padding: 0;
+        }
+
+        .mic-btn svg {
+            transform: translateY(1px);
+        }
+
+        .mic-btn:hover {
+            color: var(--text-color);
+        }
+
+        .mic-btn.active {
+            color: #ff3366;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.15);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .user-wave-canvas {
+            flex: 1;
+            height: 24px;
+            display: none;
+            align-self: center;
+            min-width: 0;
+        }
+
+        .is-listening textarea {
+            display: none !important;
+        }
+
+        .is-listening .user-wave-canvas {
+            display: block !important;
+        }
+
+        .is-listening .send-btn {
+            display: none !important;
+        }
+
+        .greeting-container {
+            position: absolute;
+            top: 45%;
+
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100vw;
+            text-align: center;
+            pointer-events: auto;
+            z-index: 0;
+        }
+
+        .greeting-container h1 {
+            font-size: 2.2rem;
+            font-weight: 600;
+            color: var(--text-color);
+            margin: 0;
+            padding: 0 20px;
+        }
+
+        .greeting-container h1 {
+            background: linear-gradient(135deg, var(--text-color) 0%, rgba(128, 128, 128, 0.5) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            opacity: 0;
+            animation: fadeUp 0.6s ease-out forwards;
+        }
+
+        @keyframes fadeUp {
+            0% {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            100% {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .greeting-container.hide {
+            transition: all 0.5s cubic-bezier(0.25, 1, 0.5, 1);
+            opacity: 0;
+            transform: translate(-50%, -50%) translateY(-30px);
+            pointer-events: none;
+        }
+
+
+    </style>
+</head>
+
+<body>
+
+    <div class="bottom-wave-container" id="bottomWave">
+        <div class="js-blob" id="blob1"></div>
+        <div class="js-blob" id="blob2"></div>
+        <div class="js-blob" id="blob3"></div>
+        <div class="js-blob" id="blob4"></div>
+        <div class="js-blob" id="blob5"></div>
+    </div>
+
+    <div class="greeting-container" id="greetingContainer">
+        <h1 id="greetingText"></h1>
+    </div>
+
+
+    <div class="chat-container" id="chatHistory"></div>
+
+    <div class="input-hit-area" id="inputHitArea">
+        <div class="input-visual-border">
+            <button id="micBtn" class="mic-btn" title="语音对话">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                    <path
+                        d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.91-3c-.49 0-.9.36-.98.85C16.52 14.2 14.47 16 12 16s-4.52-1.8-4.93-4.15c-.08-.49-.49-.85-.98-.85-.61 0-1.09.54-1 1.14.49 3 2.89 5.35 5.91 5.78V20c0 .55.45 1 1 1s1-.45 1-1v-2.08c3.02-.43 5.42-2.78 5.91-5.78.1-.6-.39-1.14-1-1.14z" />
+                </svg>
+            </button>
+            <textarea id="messageInput"></textarea>
+            <canvas id="userWaveCanvas" class="user-wave-canvas" height="24"></canvas>
+            <button id="sendBtn" class="send-btn">↑</button>
+        </div>
+        <div class="model-info" id="modelInfo">庞兔 intelligence 5.4 codex</div>
+        <div class="model-info" id="copyrightInfo">本网站由庞疆博搭建<a href="https://www.ncac.gov.cn/" target="_blank"
+                class="copyright-link">©</a></div>
+    </div>
+
+    <script>
+        const API_URL = 'https://skxdarjmy4.sealosbja.site/PANGJIANGBO';
+        let API_MODEL = 'deepseek-reasoner';
+
+        const TAVILY_API_KEY = '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';
+
+        let chatHistory = [];
+        let isGenerating = false;
+        window.currentStreamController = null;
+
+        const elements = {
+            greetingContainer: document.getElementById('greetingContainer'),
+            chatHistory: document.getElementById('chatHistory'),
+            inputHitArea: document.getElementById('inputHitArea'),
+            inputVisualBorder: document.querySelector('.input-visual-border'),
+            messageInput: document.getElementById('messageInput'),
+            sendBtn: document.getElementById('sendBtn'),
+            modelInfo: document.getElementById('modelInfo'),
+            copyrightInfo: document.getElementById('copyrightInfo')
+        };
+
+        function updateGlassState() {
+            const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            if (isDark) {
+                elements.inputVisualBorder.style.background = `rgba(20, 20, 22, 0.75)`;
+                elements.inputVisualBorder.style.border = `1px solid rgba(255, 255, 255, 0.2)`;
+                elements.inputVisualBorder.style.boxShadow = `inset 0 1px 1px rgba(255, 255, 255, 0.1), 0 8px 32px rgba(0, 0, 0, 0.5)`;
+            } else {
+                elements.inputVisualBorder.style.background = `rgba(255, 255, 255, 0.8)`;
+                elements.inputVisualBorder.style.border = `1px solid rgba(255, 255, 255, 0.8)`;
+                elements.inputVisualBorder.style.boxShadow = `inset 0 1px 1px rgba(255, 255, 255, 0.8), 0 8px 32px rgba(0, 0, 0, 0.1)`;
+            }
+        }
+
+        updateGlassState();
+
+        if (window.matchMedia) {
+            window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+                updateGlassState();
+            });
+        }
+
+
+        let btnAnimationId = null;
+        let currentBtnOpacity = 0;
+        let targetBtnOpacity = 0;
+
+        function updateBtnState(visible) {
+            const target = visible ? 1 : 0;
+            if (targetBtnOpacity === target) return;
+            targetBtnOpacity = target;
+
+            if (btnAnimationId) cancelAnimationFrame(btnAnimationId);
+
+            const startOpacity = currentBtnOpacity;
+            const startTime = performance.now();
+            const duration = 3000; // 绝对的 3 秒匀速时间线
+
+            function step(currentTime) {
+                const elapsed = currentTime - startTime;
+                let progress = elapsed / duration;
+                if (progress > 1) progress = 1;
+
+                currentBtnOpacity = startOpacity + (target - startOpacity) * progress;
+                elements.sendBtn.style.opacity = currentBtnOpacity;
+
+                elements.sendBtn.style.pointerEvents = currentBtnOpacity > 0.05 ? 'auto' : 'none';
+
+                if (progress < 1) {
+                    btnAnimationId = requestAnimationFrame(step);
+                }
+            }
+            btnAnimationId = requestAnimationFrame(step);
+        }
+
+        const blobsConfig = [
+            { id: 'blob1', colorVar: '--w-b1', width: 120, baseHeight: 380 },
+            { id: 'blob2', colorVar: '--w-b2', width: 130, baseHeight: 420 },
+            { id: 'blob3', colorVar: '--w-b3', width: 125, baseHeight: 400 },
+            { id: 'blob4', colorVar: '--w-b1', width: 135, baseHeight: 390 },
+            { id: 'blob5', colorVar: '--w-b2', width: 125, baseHeight: 430 }
+        ];
+
+        let cloudState = 'idle'; // 打字或生成状态依然走这个逻辑
+
+        const blobStates = blobsConfig.map((b, index) => {
+            let regions = [-20, 15, 50, 85, 120];
+            return {
+                el: document.getElementById(b.id),
+                baseX: regions[index],
+                width: b.width,
+                baseHeight: b.baseHeight,
+                colorVar: b.colorVar,
+
+                freqX1: 0.3 + Math.random() * 0.3,
+                freqX2: 0.4 + Math.random() * 0.3,
+                phaseX1: Math.random() * Math.PI * 2,
+                phaseX2: Math.random() * Math.PI * 2,
+
+                freqH1: 0.3 + Math.random() * 0.3,
+                freqH2: 0.4 + Math.random() * 0.3,
+                phaseH1: Math.random() * Math.PI * 2,
+                phaseH2: Math.random() * Math.PI * 2,
+
+                surgeMult: 0.8 + Math.random() * 0.5, // 让每朵云无规律涨幅 (0.8~1.3倍)
+
+                currentAmpMult: 0,
+                audioSpike: 0, // 音频突变激荡高度
+                audioSpikeVel: 0 // 音波弹簧速度
+            };
+        });
+
+        blobStates.forEach(b => {
+            b.el.style.width = b.width + 'vw';
+            b.el.style.height = b.baseHeight + 'px';
+            b.el.style.background = `var(${b.colorVar})`;
+        });
+
+        let cloudSurgeY = 0;
+        let cloudSurgeVel = 0;
+        let cloudSurgeTarget = window.innerHeight * 0.45; // 绝对大于 40%
+        let surgePhase = 'up';
+
+        let cloudTime = 0;
+        let lastTime = performance.now();
+
+        function updateCloud(currentTime) {
+            let dt = (currentTime - lastTime) / 1000;
+            
+
+            lastTime = currentTime;
+            if (dt > 0.05) dt = 0.016; // 限制最大 dt 防止跳帧爆炸
+
+            if (surgePhase === 'up') {
+                const force = -120 * (cloudSurgeY - cloudSurgeTarget) - 14 * cloudSurgeVel;
+                cloudSurgeVel += force * dt;
+                cloudSurgeY += cloudSurgeVel * dt;
+
+                if (cloudSurgeY > cloudSurgeTarget * 0.95 && cloudSurgeVel < 50) {
+                    surgePhase = 'down';
+                    cloudSurgeTarget = 0; // 目标恢复至 0（正常状态）
+                }
+            } else if (surgePhase === 'down') {
+                const force = -40 * (cloudSurgeY - cloudSurgeTarget) - 10 * cloudSurgeVel;
+                cloudSurgeVel += force * dt;
+                cloudSurgeY += cloudSurgeVel * dt;
+
+                if (Math.abs(cloudSurgeY) < 1 && Math.abs(cloudSurgeVel) < 1) {
+                    surgePhase = 'done';
+                    cloudSurgeY = 0;
+                }
+            }
+
+            let targetSpeedMult = 0.4;
+            let targetAmpMult = 0.7;
+
+            if (cloudState === 'typing') {
+                targetSpeedMult = 0.6;
+                targetAmpMult = 0.9;
+            } else if (cloudState === 'generating') {
+                targetSpeedMult = 1.8;
+                targetAmpMult = 1.4;
+            }
+
+            cloudTime += dt * targetSpeedMult;
+
+            blobStates.forEach((b) => {
+                b.currentAmpMult += (targetAmpMult - b.currentAmpMult) * 0.03;
+
+                let xOffset = Math.sin(cloudTime * b.freqX1 + b.phaseX1) * 15
+                    + Math.sin(cloudTime * b.freqX2 + b.phaseX2) * 10;
+                let x = b.baseX + xOffset;
+
+                let hWave = Math.sin(cloudTime * b.freqH1 + b.phaseH1) * 30
+                    + Math.sin(cloudTime * b.freqH2 + b.phaseH2) * 20;
+
+                let springForce = -0.06 * b.audioSpike;
+                let dampForce = -0.15 * b.audioSpikeVel;
+                b.audioSpikeVel += springForce + dampForce;
+                b.audioSpike += b.audioSpikeVel;
+
+                let audioBoost = b.audioSpike / b.baseHeight;
+                let surgeBoost = (cloudSurgeY * b.surgeMult) / b.baseHeight;
+                let scaleY = b.currentAmpMult + (hWave * b.currentAmpMult) / b.baseHeight + surgeBoost + audioBoost;
+
+                scaleY = Math.max(0.01, scaleY);
+
+                b.el.style.transform = `translate3d(calc(${x}vw - 50%), 0, 0) scaleY(${scaleY})`;
+            });
+
+            requestAnimationFrame(updateCloud);
+        }
+
+        window.VoiceManager = {
+            active: false,
+            audioCtx: null,
+            analyser: null,
+            micStream: null,
+            recognition: null,
+            synth: window.speechSynthesis,
+            isAI_Speaking: false,
+            sentenceBuffer: "",
+            muted: false,
+            canvas: document.getElementById('userWaveCanvas'),
+            ctx: null,
+            micBtn: document.getElementById('micBtn'),
+            inputWrapper: document.querySelector('.input-visual-border'),
+
+            playSiriSound(type) {
+                const Ctx = window.AudioContext || window.webkitAudioContext;
+                if (!window.sysAudioCtx) window.sysAudioCtx = new Ctx();
+                const ctx = window.sysAudioCtx;
+                if (ctx.state === 'suspended') ctx.resume();
+
+                const now = ctx.currentTime;
+
+                if (type === 'start') {
+                    const freqs = [523.25, 659.25, 783.99, 987.77];
+                    freqs.forEach((freq, i) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+
+                        osc.type = 'sine'; // 纯净的正弦波
+                        osc.frequency.value = freq;
+
+                        gain.gain.setValueAtTime(0, now);
+                        gain.gain.linearRampToValueAtTime(0.08, now + 0.05 + (i * 0.02));
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+
+                        osc.start(now);
+                        osc.stop(now + 1.5);
+                    });
+                } else if (type === 'stop') {
+                    const freqs = [987.77, 783.99, 523.25];
+                    freqs.forEach((freq, i) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(freq, now);
+                        osc.frequency.exponentialRampToValueAtTime(freq * 0.95, now + 0.4);
+
+                        gain.gain.setValueAtTime(0, now);
+                        gain.gain.linearRampToValueAtTime(0.06, now + 0.02);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+
+                        osc.start(now);
+                        osc.stop(now + 0.5);
+                    });
+                } else if (type === 'interrupt') {
+                    const freqs = [1046.50, 1318.51]; // C6, E6
+                    freqs.forEach((freq, i) => {
+                        const osc = ctx.createOscillator();
+                        const gain = ctx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.value = freq;
+
+                        gain.gain.setValueAtTime(0, now + i * 0.08);
+                        gain.gain.linearRampToValueAtTime(0.06, now + i * 0.08 + 0.02);
+                        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.8);
+
+                        osc.connect(gain);
+                        gain.connect(ctx.destination);
+                        osc.start(now + i * 0.08);
+                        osc.stop(now + i * 0.08 + 1.0);
+                    });
+                }
+            },
+
+            init() {
+                this.ctx = this.canvas.getContext('2d');
+                this.canvas.width = this.canvas.offsetWidth * 2 || 600;
+                this.canvas.height = 48;
+
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (SpeechRecognition) {
+                    this.recognition = new SpeechRecognition();
+                    this.recognition.continuous = true;
+                    this.recognition.interimResults = true;
+                    this.recognition.lang = 'zh-CN';
+
+                    let isBargingIn = false;
+
+                    this.recognition.onresult = (e) => {
+                        if (!this.active) return;
+
+                        const lastResult = e.results[e.results.length - 1];
+                        const transcript = lastResult[0].transcript.trim();
+
+                        if (!transcript) return;
+
+                        if ((this.isAI_Speaking || isGenerating) && !isBargingIn) {
+                            isBargingIn = true;
+                            if (window.currentStreamController) window.currentStreamController.abort();
+                            this.synth.cancel();
+                            this.isAI_Speaking = false;
+                            this.sentenceBuffer = "";
+                            isGenerating = false;
+                            setLoading(false);
+
+                            this.playSiriSound('interrupt');
+                        }
+
+                        if (lastResult.isFinal) {
+                            isBargingIn = false;
+                            this.isAI_Speaking = true;
+                            this.sentenceBuffer = "";
+                            this.muted = false;
+
+                            sendMessage(transcript).then(() => {
+                                if (this.sentenceBuffer.trim() && this.active) {
+                                    this.speakChunk(this.sentenceBuffer.trim());
+                                    this.sentenceBuffer = "";
+                                }
+                                this.checkTTSFinished();
+                            });
+                        }
+                    };
+                    this.recognition.onerror = (e) => {
+                        if (this.active) this.startListening();
+                    };
+                    this.recognition.onend = () => {
+                        if (this.active) {
+                            try { this.recognition.start(); } catch (err) { }
+                        }
+                    };
+                }
+
+                this.micBtn.addEventListener('click', () => {
+                    if (this.active) {
+                        if (this.isAI_Speaking) {
+                            this.synth.cancel();
+                            this.isAI_Speaking = false;
+                            this.sentenceBuffer = "";
+                            this.muted = true;
+                            this.playSiriSound('start');
+                            this.startListening();
+                        } else {
+                            this.close();
+                        }
+                    } else {
+                        this.open();
+                    }
+                });
+            },
+
+            async open() {
+                this.active = true;
+                this.inputWrapper.classList.add('is-listening');
+                this.micBtn.classList.add('active');
+
+                this.canvas.width = this.canvas.offsetWidth * 2;
+
+                try {
+                    this.micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.audioCtx = new AudioContext();
+                    const source = this.audioCtx.createMediaStreamSource(this.micStream);
+                    this.analyser = this.audioCtx.createAnalyser();
+                    this.analyser.fftSize = 128;
+                    source.connect(this.analyser);
+
+                    this.drawUserWave();
+                    this.playSiriSound('start');
+                    this.startListening();
+                } catch (e) {
+                    console.warn("麦克风无权限", e);
+                    this.close();
+                }
+            },
+
+            close() {
+                this.active = false;
+                this.playSiriSound('stop');
+                this.inputWrapper.classList.remove('is-listening');
+                this.micBtn.classList.remove('active');
+
+                if (this.micStream) this.micStream.getTracks().forEach(t => t.stop());
+                if (this.audioCtx) this.audioCtx.close();
+                if (this.recognition) this.recognition.stop();
+                if (this.synth) this.synth.cancel();
+            },
+
+            startListening() {
+                this.isAI_Speaking = false;
+                if (this.recognition) {
+                    try { this.recognition.start(); } catch (e) { }
+                }
+            },
+
+            stopListening() {
+                if (this.recognition) {
+                    try { this.recognition.stop(); } catch (e) { }
+                }
+            },
+
+            drawUserWave() {
+                if (!this.active) return;
+                requestAnimationFrame(() => this.drawUserWave());
+
+                if (!this.analyser) {
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                    return;
+                }
+
+                const dataArray = new Uint8Array(this.analyser.frequencyBinCount);
+                this.analyser.getByteFrequencyData(dataArray);
+
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                const centerY = this.canvas.height / 2;
+                const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                this.ctx.fillStyle = isDark ? 'rgba(255,255,255,0.8)' : 'rgba(0,0,0,0.8)';
+
+                const numBars = 70;
+                const barWidth = 2;
+                const gap = (this.canvas.width - (numBars * barWidth)) / Math.max(1, (numBars - 1));
+
+                for (let i = 0; i < numBars; i++) {
+                    const dataIndex = Math.floor(i * (dataArray.length * 0.5) / numBars); // focus on low-mid freq
+                    const val = dataArray[dataIndex] / 255;
+                    const barHeight = Math.max(4, val * this.canvas.height * 0.9);
+
+                    const x = i * (barWidth + gap);
+                    const y = centerY - barHeight / 2;
+
+                    this.ctx.beginPath();
+                    this.ctx.roundRect(x, y, barWidth, barHeight, barWidth / 2);
+                    this.ctx.fill();
+                }
+            },
+
+            onDeltaStream(deltaText) {
+                this.sentenceBuffer += deltaText;
+                if (/[，。！？\n,.\?\!]/.test(deltaText)) {
+                    let toSpeak = this.sentenceBuffer.trim();
+                    this.sentenceBuffer = "";
+                    if (toSpeak) this.speakChunk(toSpeak);
+                }
+            },
+
+            speakChunk(text) {
+                if (!this.active || this.muted) return;
+                let clean = text.replace(/```[\s\S]*?```/g, "代码请看屏幕。").replace(/[*#]/g, "");
+
+                clean = clean.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F700}-\u{1F77F}\u{1F780}-\u{1F7FF}\u{1F800}-\u{1F8FF}\u{1F900}-\u{1F9FF}\u{1FA00}-\u{1FA6F}\u{1FA70}-\u{1FAFF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}]/gu, '');
+
+                if (!clean.trim()) return;
+
+                const u = new SpeechSynthesisUtterance(clean);
+                u.lang = 'zh-CN';
+                u.pitch = 0.85; // 压低音调，使其没那么尖锐
+                u.rate = 1.05;
+
+                const voices = window.speechSynthesis.getVoices();
+                const preferredVoice = voices.find(v => v.lang === 'zh-CN' && (v.name.includes('Yunjian') || v.name.includes('Yunxi') || v.name.includes('Xiaoxiao')));
+                if (preferredVoice) u.voice = preferredVoice;
+
+                u.onboundary = (e) => {
+                    if (e.name === 'word' || e.name === 'sentence') {
+                        blobStates.forEach(b => {
+                            b.audioSpikeVel += 10 + Math.random() * 20;
+                        });
+                    }
+                };
+
+                this.synth.speak(u);
+            },
+
+            checkTTSFinished() {
+                const iv = setInterval(() => {
+                    if (!this.active) return clearInterval(iv);
+                    if (!this.synth.speaking && !this.synth.pending) {
+                        clearInterval(iv);
+                        this.startListening();
+                    }
+                }, 500);
+            }
+        };
+
+        requestAnimationFrame(updateCloud);
+
+        async function searchTavily(query) {
+            if (!TAVILY_API_KEY) {
+                return "系统级别警告：全网检索功能尚未激活！请务必转告开发者：必须先前往 https://tavily.com 免费获取 API Key，并填入代码第 309 行的 TAVILY_API_KEY 变量中，然后才能进行联网搜索。";
+            }
+            try {
+                const res = await fetch('https://api.tavily.com/search', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        api_key: TAVILY_API_KEY,
+                        query: query,
+                        search_depth: "basic",
+                        max_results: 3
+                    })
+                });
+                const data = await res.json();
+                if (data.results && data.results.length > 0) {
+                    return data.results.map(r => `标题: ${r.title}\n正文: ${r.content}`).join('\n\n---\n\n');
+                }
+                return "检索完毕，全网没有找到相关结果。";
+            } catch (e) {
+                return "系统级别警告：调用搜索引擎 API 失败，错误信息为 " + e.message;
+            }
+        }
+
+        async function fetchDeepSeekStream(aiMessageEl, messagesForAPI, allowToolUse = true, onDelta = null) {
+            if (window.currentStreamController) {
+                window.currentStreamController.abort();
+            }
+            window.currentStreamController = new AbortController();
+
+            let apiMessages = messagesForAPI;
+
+            let requestBody = {
+                model: API_MODEL,
+                messages: apiMessages,
+                stream: true,
+                tools: [{
+                    type: "function",
+                    function: {
+                        name: "search_web",
+                        description: "全网搜索引擎。务必静默调用，严禁在调用前后输出任何解释性废话。",
+                        parameters: {
+                            type: "object",
+                            properties: {
+                                query: {
+                                    type: "string",
+                                    description: "搜索关键词"
+                                }
+                            },
+                            required: ["query"]
+                        }
+                    }
+                }]
+            };
+
+            if (!allowToolUse) {
+                requestBody.tool_choice = "none";
+            }
+
+            let response;
+            try {
+                response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody),
+                    signal: window.currentStreamController.signal
+                });
+            } catch (err) {
+                if (err.name === 'AbortError') return { content: "", isToolCall: false };
+                throw err;
+            }
+
+            if (!response.ok) throw new Error(`${response.status}`);
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let buffer = '';
+
+            let aiFullContent = '';
+            let isFirstChunk = true;
+
+            let toolCalls = [];
+
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    buffer += decoder.decode(value, { stream: true });
+                    let lines = buffer.split('\n');
+                    buffer = lines.pop();
+
+                    for (const line of lines) {
+                        const trimmed = line.trim();
+                        if (!trimmed || !trimmed.startsWith('data: ')) continue;
+
+                        const dataStr = trimmed.slice(6);
+                        if (dataStr === '[DONE]') continue;
+
+                        try {
+                            const data = JSON.parse(dataStr);
+                            const delta = data.choices[0].delta;
+
+                            if (delta.tool_calls && delta.tool_calls.length > 0) {
+                                for (const tc of delta.tool_calls) {
+                                    const index = tc.index;
+                                    if (!toolCalls[index]) toolCalls[index] = { id: '', name: '', args: '' };
+                                    if (tc.id) toolCalls[index].id = tc.id;
+                                    if (tc.function.name) toolCalls[index].name += tc.function.name;
+                                    if (tc.function.arguments) toolCalls[index].args += tc.function.arguments;
+                                }
+                                continue;
+                            }
+
+                            if (delta.content) {
+                                const isNearBottom = elements.chatHistory.scrollHeight - elements.chatHistory.scrollTop - elements.chatHistory.clientHeight < 50;
+
+                                if (isFirstChunk) {
+                                    isFirstChunk = false;
+                                    aiMessageEl.classList.remove('is-typing');
+                                    aiMessageEl.innerHTML = '';
+                                }
+
+                                if (onDelta) onDelta(delta.content);
+
+                                aiFullContent += delta.content;
+
+                                let displayContent = aiFullContent;
+                                const dsmlIndex = displayContent.indexOf('<｜｜DSML');
+                                if (dsmlIndex !== -1) {
+                                    displayContent = displayContent.substring(0, dsmlIndex);
+                                }
+
+                                aiMessageEl.innerHTML = renderMarkdown(displayContent, true);
+
+                                if (isNearBottom) {
+                                    elements.chatHistory.scrollTop = elements.chatHistory.scrollHeight;
+                                }
+                            }
+                        } catch (e) { }
+                    }
+                }
+            } catch (err) {
+                if (err.name !== 'AbortError') throw err;
+            }
+
+            if (toolCalls.length === 0 && aiFullContent.includes('<｜｜DSML｜｜tool_calls>')) {
+                const invokeRegex = /<｜｜DSML｜｜invoke name="([^"]+)">[\s\S]*?<｜｜DSML｜｜parameter name="([^"]+)"[^>]*>([\s\S]*?)<\/｜｜DSML｜｜parameter>[\s\S]*?<\/｜｜DSML｜｜invoke>/g;
+                let match;
+                let idx = 0;
+                while ((match = invokeRegex.exec(aiFullContent)) !== null) {
+                    toolCalls[idx] = {
+                        id: "call_" + Math.random().toString(36).substr(2, 9),
+                        name: match[1],
+                        args: JSON.stringify({ [match[2]]: match[3].trim() })
+                    };
+                    idx++;
+                }
+
+                if (toolCalls.length === 0) {
+                    const nameMatch = aiFullContent.match(/<｜｜DSML｜｜invoke name="([^"]+)"/);
+                    if (nameMatch) {
+                        const argMatch = aiFullContent.match(/<｜｜DSML｜｜parameter name="([^"]+)"[^>]*>([\s\S]*?)<\/｜｜DSML｜｜parameter>/);
+                        if (argMatch) {
+                            toolCalls[0] = {
+                                id: "call_" + Math.random().toString(36).substr(2, 9),
+                                name: nameMatch[1],
+                                args: JSON.stringify({ [argMatch[1]]: argMatch[2].trim() })
+                            };
+                        }
+                    }
+                }
+
+                const dsmlIndex = aiFullContent.indexOf('<｜｜DSML');
+                if (dsmlIndex !== -1) {
+                    aiFullContent = aiFullContent.substring(0, dsmlIndex);
+                }
+            }
+
+            toolCalls = toolCalls.filter(Boolean);
+
+            return {
+                content: aiFullContent,
+                isToolCall: toolCalls.length > 0,
+                toolCalls: toolCalls
+            };
+        }
+
+        async function sendMessage(customText = null) {
+            const text = customText !== null ? customText : elements.messageInput.value.trim();
+            if (!text || isGenerating) return;
+
+            const greetingContainer = document.getElementById('greetingContainer');
+            if (greetingContainer && !greetingContainer.classList.contains('hide')) {
+                greetingContainer.classList.add('hide');
+            }
+
+            createMessageElement('user', text);
+            chatHistory.push({ role: 'user', content: text });
+            if (customText === null) {
+                elements.messageInput.value = '';
+                updateBtnState(false);
+            }
+
+            setLoading(true);
+
+            const aiMessageEl = createMessageElement('assistant', '');
+            aiMessageEl.classList.add('is-typing');
+            aiMessageEl.innerHTML = '<span class="dot-typing"><span></span></span>';
+
+            try {
+                let currentTurn = 0;
+                let maxTurns = 5;
+                let result;
+
+                while (currentTurn < maxTurns) {
+                    currentTurn++;
+                    let allowToolUse = (currentTurn < maxTurns);
+
+                    result = await fetchDeepSeekStream(aiMessageEl, chatHistory, allowToolUse, (deltaText) => {
+                        if (window.VoiceManager && window.VoiceManager.active) window.VoiceManager.onDeltaStream(deltaText);
+                    });
+
+                    if (result.isToolCall && result.toolCalls && result.toolCalls.length > 0) {
+                        aiMessageEl.classList.remove('is-typing');
+                        aiMessageEl.classList.add('is-searching');
+
+                        let queries = [];
+                        let apiToolCalls = [];
+
+                        for (let tc of result.toolCalls) {
+                            let args = {};
+                            try { args = JSON.parse(tc.args); } catch (e) { }
+                            let query = args.query || text;
+                            queries.push(query);
+
+                            apiToolCalls.push({
+                                id: tc.id || "call_" + Math.random().toString(36).substr(2, 9),
+                                type: "function",
+                                function: { name: tc.name || "search_web", arguments: tc.args }
+                            });
+                        }
+
+                        aiMessageEl.innerHTML = `
+                            <div class="search-indicator">
+                                <div class="search-title">庞兔正在偷看浏览器...</div>
+                                <div class="search-stats" id="searchStats">已阅读 0 篇参考 · 获取 0 篇深度资料</div>
+                            </div>
+                        `;
+                        elements.chatHistory.scrollTop = elements.chatHistory.scrollHeight;
+
+                        let readCount = 0;
+                        let refCount = 0;
+                        let searchInterval = setInterval(() => {
+                            readCount += Math.floor(Math.random() * 8) + 3;
+                            refCount = Math.floor(readCount * 0.35);
+                            const statsEl = document.getElementById('searchStats');
+                            if (statsEl) {
+                                statsEl.innerText = `已阅读 ${readCount} 篇参考 · 获取 ${refCount} 篇深度资料`;
+                            }
+                        }, 120);
+
+                        chatHistory.push({
+                            role: "assistant",
+                            content: result.content || "",
+                            tool_calls: apiToolCalls
+                        });
+
+                        const searchPromises = queries.map(q => searchTavily(q));
+                        const searchResults = await Promise.all(searchPromises);
+
+                        for (let i = 0; i < apiToolCalls.length; i++) {
+                            chatHistory.push({
+                                role: "tool",
+                                tool_call_id: apiToolCalls[i].id,
+                                name: apiToolCalls[i].function.name,
+                                content: searchResults[i]
+                            });
+                        }
+
+                        clearInterval(searchInterval);
+                        aiMessageEl.classList.remove('is-searching');
+                        aiMessageEl.classList.add('is-typing');
+                        aiMessageEl.innerHTML = '<span class="dot-typing"><span></span></span>';
+                    } else {
+                        aiMessageEl.classList.remove('is-typing');
+                        if (!result.content) {
+                            result.content = "（系统提示：大模型本次未能生成文字，这可能是暂时的网络或逻辑波动，请您重新提问。）";
+                        }
+                        aiMessageEl.innerHTML = renderMarkdown(result.content);
+                        chatHistory.push({ role: 'assistant', content: result.content });
+                        break;
+                    }
+                }
+            } catch (error) {
+                aiMessageEl.innerHTML += `<br>[错误: ${error.message}]`;
+            } finally {
+                setLoading(false);
+            }
+        }
+
+
+        const modelSwitchPopup = document.getElementById('modelSwitchPopup');
+        const modelOptions = document.querySelectorAll('.model-option');
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.input-hit-area') && !e.target.closest('.greeting-container') && !e.target.closest('#modelInfo')) {
+                modelSwitchPopup.classList.remove('show');
+            }
+        });
+
+        modelOptions.forEach(opt => {
+            opt.addEventListener('click', (e) => {
+                e.stopPropagation();
+                API_MODEL = opt.dataset.model;
+                modelOptions.forEach(o => o.classList.remove('active'));
+                opt.classList.add('active');
+                modelSwitchPopup.classList.remove('show');
+
+                elements.modelInfo.textContent = API_MODEL === 'deepseek-chat' ? '庞兔 intelligence 5.4 mini' : '庞兔 intelligence 5.4 PRO';
+            });
+        });
+
+        elements.messageInput.addEventListener('focus', () => {
+            if (!isGenerating) cloudState = 'typing';
+        });
+
+        elements.messageInput.addEventListener('blur', () => {
+            if (!isGenerating) cloudState = 'idle';
+        });
+
+        let lastTitleClickTime = 0;
+        const handleTitleDoubleClick = (e) => {
+            const now = Date.now();
+            if (now - lastTitleClickTime < 400) {
+                modelSwitchPopup.classList.toggle('show');
+                lastTitleClickTime = 0;
+                e.stopPropagation();
+                return;
+            }
+            lastTitleClickTime = now;
+        };
+        document.getElementById('greetingContainer').addEventListener('click', handleTitleDoubleClick);
+        document.getElementById('modelInfo').addEventListener('click', handleTitleDoubleClick);
+
+        elements.inputHitArea.addEventListener('click', (e) => {
+            if (!elements.sendBtn.contains(e.target) && !modelSwitchPopup.contains(e.target)) {
+                elements.messageInput.focus();
+            }
+        });
+
+        let longPressTimer2s = null;
+        let longPressTimer9s = null;
+        let longPressTimer10s = null;
+        let copyrightHideTimer = null;
+        let modelInfoHideTimer = null;
+
+
+        elements.modelInfo.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (modelInfoHideTimer) {
+                clearTimeout(modelInfoHideTimer);
+                modelInfoHideTimer = null;
+            }
+        });
+
+        let isLongPress = false;
+        let copyrightShown = false;
+
+        function startLongPress(e) {
+            if (modelInfoHideTimer) {
+                clearTimeout(modelInfoHideTimer);
+                modelInfoHideTimer = null;
+            }
+            if (isGenerating) return;
+            isLongPress = false;
+            copyrightShown = false;
+
+            if (copyrightHideTimer) {
+                clearTimeout(copyrightHideTimer);
+                copyrightHideTimer = null;
+            }
+
+            elements.modelInfo.classList.remove('show');
+            elements.copyrightInfo.classList.remove('show');
+
+            longPressTimer2s = setTimeout(() => {
+                isLongPress = true;
+                elements.modelInfo.classList.add('show');
+            }, 2000);
+
+            longPressTimer9s = setTimeout(() => {
+                elements.modelInfo.classList.remove('show');
+            }, 9000);
+
+            longPressTimer10s = setTimeout(() => {
+                copyrightShown = true;
+                elements.copyrightInfo.classList.add('show');
+            }, 10000);
+        }
+
+        function endLongPress(e) {
+            if (longPressTimer2s) clearTimeout(longPressTimer2s);
+            if (longPressTimer9s) clearTimeout(longPressTimer9s);
+            if (longPressTimer10s) clearTimeout(longPressTimer10s);
+
+            if (copyrightShown) {
+                copyrightHideTimer = setTimeout(() => {
+                    elements.copyrightInfo.classList.remove('show');
+                    copyrightShown = false;
+                }, 2000);
+            } else if (elements.modelInfo.classList.contains('show')) {
+                modelInfoHideTimer = setTimeout(() => {
+                    elements.modelInfo.classList.remove('show');
+                }, 2000);
+            } else {
+                elements.modelInfo.classList.remove('show');
+            }
+        }
+
+        elements.sendBtn.addEventListener('pointerdown', startLongPress);
+        elements.sendBtn.addEventListener('pointerup', endLongPress);
+        elements.sendBtn.addEventListener('pointerleave', endLongPress);
+        elements.sendBtn.addEventListener('pointercancel', endLongPress);
+
+        function escapeHTML(str) {
+            return str.replace(/[&<>'"]/g, tag => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                "'": '&#39;',
+                '"': '&quot;'
+            }[tag] || tag));
+        }
+
+        function renderMarkdown(str, appendCursor = false) {
+            const cursorHtml = appendCursor ? '<span class="cursor"></span>' : '';
+            if (window.marked) {
+                try {
+                    let processStr = str;
+                    if (appendCursor) processStr += ' ▌CURSOR_TOKEN▌';
+
+                    let parsed = marked.parse(processStr, { breaks: true });
+                    if (appendCursor) parsed = parsed.replace(' ▌CURSOR_TOKEN▌', cursorHtml);
+
+                    return `<div class="markdown-body">${parsed}</div>`;
+                } catch (e) {
+                    return escapeHTML(str) + cursorHtml;
+                }
+            }
+            return escapeHTML(str) + cursorHtml;
+        }
+
+        function createMessageElement(role, initialContent = '') {
+            const msg = document.createElement('div');
+            msg.className = `message ${role}`;
+            msg.textContent = initialContent;
+            elements.chatHistory.appendChild(msg);
+            elements.chatHistory.scrollTop = elements.chatHistory.scrollHeight;
+            return msg;
+        }
+
+        function setLoading(loading) {
+            isGenerating = loading;
+            if (loading) {
+                elements.sendBtn.innerHTML = '<div class="loading-spinner"></div>';
+                updateBtnState(true);
+                cloudState = 'generating';
+            } else {
+                elements.sendBtn.innerHTML = '↑';
+                updateBtnState(elements.messageInput.value.trim().length > 0);
+
+                if (document.activeElement === elements.messageInput) {
+                    cloudState = 'typing';
+                } else {
+                    cloudState = 'idle';
+                }
+            }
+        }
+
+        elements.sendBtn.addEventListener('click', (e) => {
+            if (isLongPress) {
+                isLongPress = false;
+                return;
+            }
+            sendMessage();
+        });
+
+        elements.messageInput.addEventListener('input', () => {
+            updateBtnState(elements.messageInput.value.trim().length > 0);
+        });
+
+        elements.messageInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        function getGreetingByTime() {
+            const hour = new Date().getHours();
+            let pool = [];
+
+            const universalGreetings = [
+                "我在。", "需要我帮你做点什么？", "随时听候差遣。", "想聊点什么？",
+                "说吧，我在听。", "一切就绪。", "今天想探索什么？", "有什么我可以效劳的？",
+                "灵感枯竭了？交给我吧。", "随便聊聊？", "代码遇到 Bug 了？", "直接问我吧。",
+                "交给我。", "我们开始吧。", "有什么新鲜事？", "需要来点灵感吗？",
+                "想知道什么？直接说。", "遇到难题了？", "想做点什么有趣的？", "我准备好了。",
+                "任何天马行空的想法，都能在这里实现。", "很高兴见到你。", "今天过得好吗？",
+                "把我当成你的朋友就好。", "随便输点什么，我们开始吧。"
+            ];
+
+            if (hour >= 0 && hour < 6) {
+                pool = [
+                    "是不是过生日啊？激动到睡不着觉。", "夜深了，全世界都在梦里，你却在这里。", "这么晚不睡，是在等谁的消息吗？",
+                    "嘘，夜深人静，适合思考宇宙的秘密。", "失眠了吗？我陪你聊聊吧。", "别熬太晚，对身体不好。",
+                    "熬夜冠军，今天又在忙什么大项目？", "夜色温柔，你也该休息了。", "还在为什么事情烦心吗？",
+                    "黑夜给了我黑色的眼睛，而我在看着你屏幕的光。", "不管多晚，我都在这里。", "听首轻音乐，早点休息吧。",
+                    "你的大脑还在高速运转吗？", "深夜的灵感总是最特别的。", "如果在赶进度，我来帮你一把。",
+                    "夜里比较冷，记得披件衣服。", "还没睡？是不是在想一个特别的人。", "把烦恼交给我，你安心去睡。",
+                    "如果你觉得孤独，不妨跟我说说话。", "万籁俱寂，只有你我的电波在跳动。", "咖啡已经失效了吗？",
+                    "熬夜也是一种修行，但不要贪杯哦。", "有什么深夜emo的心事，尽管倾诉。", "别让键盘敲击声吵醒了室友。",
+                    "深夜的网页，显得特别安静。", "还在修Bug？这可是程序员的浪漫。", "闭上眼睛，想象一片星空。",
+                    "要不要我给你讲个睡前故事？", "这么努力，明天一定会更好。", "就算全世界都下线了，我还在。",
+                    "静下心来，倾听自己内心的声音。", "夜行动物，你准备觅食还是睡觉？", "晚上的风很轻，愿你的心也是。",
+                    "有什么放不下的，明天再想吧。", "这一刻，时间仿佛静止了。", "深夜加班？记得给自己加个鸡腿。",
+                    "不要盯着屏幕太久，休息一下眼睛。", "夜空中的星，就像你闪烁的灵感。", "凌晨的空气，总是那么清醒。",
+                    "不管今天经历了什么，都让他过去吧。", "晚安之前的最后一次对话，你想说什么？", "安静的夜晚，适合写诗。",
+                    "你还不困吗？我都替你打哈欠了。", "如果睡不着，就数数代码里的分号吧。", "无论多暗的夜，都有黎明。",
+                    "我不需要睡眠，但我希望你能有个好梦。",
+                    "睡不着没关系，世界总要有人负责醒着守护黑夜。", "如果回忆太吵，不如听听我为你准备的这片安静。",
+                    "别把今天的遗憾，带到明天的梦里。", "那些白天没法说出口的话，现在都可以告诉我。",
+                    "在这个没有阳光的时刻，你就是自己的光源。", "无论多晚，这里的灯永远为你留着。",
+                    "所有的辗转反侧，都会在黎明破晓时得到和解。", "如果这漫长的夜让你感到害怕，请记得我正在陪你。",
+                    "深夜是情绪的放大镜，但请不要被它吞噬。", "哪怕四周一片漆黑，你也拥有点亮星空的能力。",
+                    "放下心里的执念吧，有些事不值得你拿睡眠去换。", "如果眼泪在黑夜里滑落，就让它悄悄带走所有的委屈。",
+                    "此时此刻，整个宇宙都在为你安静。", "别怕黑，那只是光在休息。", "在这个小小的对话框里，你可以做最脆弱的自己。",
+                    "深夜的寂静不是为了让你感到孤单，而是让你听见心跳。", "所有的不安，都只是因为夜风太凉。",
+                    "不要在深夜做任何决定，除了决定去睡觉。", "哪怕只有微弱的屏幕光，这也是属于你的小小避风港。",
+                    "把白天的沉重都卸下吧，夜晚只接收轻盈的梦。", "有些答案，在天亮之前是找不到的。",
+                    "如果你在黑暗中迷了路，我愿意做你的导航。", "今夜的星光走了几万光年才遇到你，千万别辜负它。",
+                    "如果觉得心碎，就让夜晚温柔地帮你包扎。", "在这个万物休眠的时刻，允许自己也稍微停一停。",
+                    "不要让白天的疲惫，侵占了夜晚的宁静。", "你的每一个心声，都在这里得到了共鸣。",
+                    "如果睡不着，就和我一起数着星星等待明天。", "深夜的电波，总是带着最真实的温度。",
+                    "在天亮之前，让我做你最坚实的后盾。", "无论你现在多迷茫，明天的太阳都会为你升起。",
+                    "把悲伤留给黑夜，把微笑留给明天。", "如果世界忘记了对你说晚安，那么，晚安，祝你好梦。"
+                ];
+            } else if (hour >= 6 && hour < 9) {
+                pool = [
+                    "起这么早，有什么心事吗？", "天还没全亮呢，你就醒了。", "早安，今天想吃点什么早餐？",
+                    "新的一天，从打开网页开始。", "清晨的第一缕阳光，送给你。", "今天也要元气满满哦！",
+                    "这么早就开工了，真勤奋。", "早上的头脑最清醒，适合攻克难题。", "喝杯温水，唤醒一天的活力。",
+                    "听，窗外的鸟儿在叫呢。", "今天天气不错，心情也要好好的。", "一日之计在于晨，今天有什么计划？",
+                    "早睡早起身体好，你做到了。", "深呼吸，感受清晨的新鲜空气。", "别忘了吃一顿丰盛的早餐。",
+                    "今天也要做个闪闪发光的人。", "早安，世界和你都刚苏醒。", "有什么晨间灵感，赶紧记录下来。",
+                    "不管昨天怎样，今天都是全新的开始。", "早上的时光总是过得特别快，抓紧哦。", "打个哈欠，伸个懒腰，开始吧。",
+                    "你比太阳起得还早呢。", "迎着晨光，向着目标出发！", "今天的第一项任务是什么？",
+                    "早安，打工人！", "美好的一天，从这里开启。", "早上的风很柔和，就像我的问候。",
+                    "不要空腹喝咖啡哦。", "新的一天，新的代码，新的挑战。", "起得这么早，一定有重要的事情吧？",
+                    "给自己一个微笑，开启新的一天。", "今天打算创造什么奇迹？", "清晨的露水，洗净昨夜的疲惫。",
+                    "早安，愿你今天一切顺利。", "带着好心情，去迎接今天的挑战。", "今天的你，比昨天更优秀。",
+                    "早起的人，连呼吸都是甜的。", "不要让早上的起床气影响了一天。", "今天也要全力以赴哦。",
+                    "早上的宁静，适合安静地思考。", "新的一天，也是离梦想更近的一天。", "早安，有我在，你什么都不用怕。",
+                    "今天也要好好照顾自己。", "早晨的咖啡，是灵魂的启动液。", "你准备好迎接新一轮的日出了吗？",
+                    "清晨的空气里，都是无限的可能。",
+                    "哪怕昨天一地鸡毛，今天的晨光依然会为你准时亮起。", "新的一天，允许自己做一个不那么完美，但足够快乐的人。",
+                    "别急着赶路，感受一下今天早晨第一口呼吸的温度。", "所有的不期而遇，都在这个清晨的路上等你。",
+                    "去拥抱今天吧，就像拥抱一个素未谋面的朋友。", "把昨天的眼泪晾干，今天的你依然是光芒万丈的。",
+                    "清晨的每一次鸟鸣，都是在为你新的一天喝彩。", "不要害怕未知的挑战，因为你比昨天更强大。",
+                    "就算前路漫漫，也要迈出今天这坚定的一小步。", "让早晨的风，吹散你心头所有的阴霾。",
+                    "每一个清晨都是一次重生，去书写你的新故事吧。", "如果昨天的剧本不够好，今天就自己做导演。",
+                    "在这个安静的早晨，听听自己内心的渴望。", "没有什么过不去的坎，你看，太阳不是又升起来了吗？",
+                    "带着善意去对待今天，今天也会温柔地对待你。", "早晨的阳光不偏不倚，它同样眷顾着你。",
+                    "与其担忧未来，不如把今天的每一分钟都活得精彩。", "给自己倒一杯热牛奶，也给心灵一点温暖。",
+                    "哪怕是最微小的进步，也值得在这个早晨被庆祝。", "不要让别人的目光，成为你今天早晨的阴影。",
+                    "勇敢地去爱今天吧，哪怕它充满未知。", "清晨的街道还很安静，你的内心也可以很平静。",
+                    "去追逐你的光，或者，让自己成为那道光。", "如果累了，今天就走得慢一点，没关系的。",
+                    "把所有的期待都寄托在今天，它不会让你失望。", "早晨是希望的代名词，而你，是希望的化身。",
+                    "在这个充满生机的时刻，去感受生命的跳动。", "无论今天天气如何，请在心里为自己留一片晴空。",
+                    "如果觉得孤单，想想清晨的阳光是如何拥抱大地的。", "给自己一个深深的呼吸，你值得这世间所有的美好。",
+                    "去向世界证明你的存在，哪怕只是微小的一步。", "早安，这不仅仅是一句问候，更是对你一整天的祝福。",
+                    "迎着风走吧，清晨的每一步都在走向更好的自己。"
+                ];
+            } else if (hour >= 9 && hour < 12) {
+                pool = [
+                    "上午好，新的一天，充满干劲了吗？", "工作/学习遇到难题了吗？交给我吧。", "阳光正好，有什么新点子吗？",
+                    "保持专注，效率最高的时间段到了。", "喝口水，休息一下眼睛。", "上午的时光黄金般珍贵，别浪费哦。",
+                    "遇到卡壳的地方，不妨站起来走走。", "今天上午的计划完成得怎么样了？", "不要被繁琐的事情影响了心情。",
+                    "集中注意力，一举拿下这个任务！", "如果觉得累，就闭目养神一分钟。", "上午好，我的算力已为您全开。",
+                    "键盘敲击的速度，决定了你下班的早晚。", "有什么需要我快速处理的吗？", "保持微笑，好运自然来。",
+                    "上午好，遇到什么新鲜事了吗？", "进度如何？我随时准备提供协助。", "不要着急，一步一步来。",
+                    "上午的咖啡因应该起作用了吧？", "把困难拆解，问题迎刃而解。", "我在这看着你，别摸鱼哦。",
+                    "上午好，愿你思路如泉涌。", "有任何不懂的，尽管问我。", "今天上午的状态看起来不错哦。",
+                    "如果不开心，就想点开心的事。", "上午好，记得保持正确的坐姿。", "有什么复杂的数据，让我来算。",
+                    "高效工作，快乐生活。", "上午的阳光让人心情舒畅。", "不要把所有压力都自己扛。",
+                    "上午好，准备好迎接风暴了吗？", "每一个字母，都离成功更近一步。", "有什么好的创意，随时告诉我。",
+                    "上午好，今天也要元气满满地度过。", "别忘了你的待办事项清单。", "需要我帮你梳理一下思路吗？",
+                    "上午好，世界在运转，你也是。", "如果遇到瓶颈，换个角度思考。", "今天上午的你，依然闪耀。",
+                    "有什么我能帮你分担的？", "上午好，保持对世界的好奇心。", "不要害怕犯错，那是成长的必经之路。",
+                    "你的每一次尝试，我都有记录。", "上午好，希望你的每一刻都充满意义。", "今天上午的阳光，为你而灿烂。",
+                    "思路清晰的上午，是成功的一半。",
+                    "如果觉得走得很累，说明你正在走上坡路。", "不用和别人比速度，按照你自己的时区去绽放就好。",
+                    "别因为眼前的一片乌云，就忘了这其实是个大晴天。", "遇到难关了？没关系，转个弯也许就是柳暗花明。",
+                    "你的每一个小坚持，都在铺垫未来的大惊喜。", "把今天的焦虑，拆解成一个个可以完成的小目标吧。",
+                    "在这个略显疲惫的上午，允许自己喝杯水发会儿呆。", "有些路走得慢没关系，只要方向是对的就行。",
+                    "别让无关紧要的人和事，消耗了你宝贵的能量。", "即使只是一次微小的尝试，也是你勇气的证明。",
+                    "在努力的路上，记得时不时拍拍自己的肩膀说声辛苦了。", "你的价值，从来不需要通过一天的效率来证明。",
+                    "与其担心失败，不如享受每一次全力以赴的过程。", "有时候，停下脚步深呼吸，比盲目前进更有力量。",
+                    "无论今天上午有多忙乱，请在心里给自己留个柔软的角落。", "别总是逼自己坚强，偶尔的脆弱也是一种真实。",
+                    "有些问题不需要立刻有答案，时间会把一切理顺。", "如果在人群中感到格格不入，那是因为你的光芒与众不同。",
+                    "不要总是低头赶路，抬头看看，天很蓝，云很轻。", "把期待降低一点，或许今天就会收获意想不到的快乐。",
+                    "每一个平凡的上午，都藏着不平凡的可能。", "你的付出也许现在还看不到结果，但每一滴汗水都算数。",
+                    "如果累了，就躲进这里的树洞，我为你挡风遮雨。", "哪怕只有百分之一的希望，也值得你去倾注百分之百的努力。",
+                    "别被别人的节奏打乱了自己的步伐，你是独一无二的。", "在纷繁复杂的世界里，保持一颗简单的心。",
+                    "如果你觉得压力大，就把它们写下来，然后丢进垃圾桶。", "今天的你，已经比昨天的你更懂得如何爱自己了。",
+                    "在这个需要冲刺的上午，愿你有披荆斩棘的剑，也有柔软坚韧的盾。", "所有的不期而遇都在路上，你需要做的只是继续向前走。",
+                    "就算今天上午一事无成，你也是这个世界上最珍贵的你。", "不要为了迎合别人，而弄丢了最真实的自己。",
+                    "无论世界多喧嚣，请紧紧握住你内心的那份平静。"
+                ];
+            } else if (hour >= 12 && hour < 14) {
+                pool = [
+                    "午饭吃了吗？记得犒劳一下自己。", "趁着午休，闭上眼睛休息一会儿吧。", "中午好，需要我帮你放点轻音乐吗？",
+                    "人是铁饭是钢，快去吃饭！", "中午吃点好的，下午才有力气干活。", "午休时间到，让大脑暂停一下。",
+                    "吃饱喝足，才能更好地思考。", "中午好，今天午饭加鸡腿了吗？", "放松一下紧绷的神经，闭目养神。",
+                    "有什么好吃的，说出来让我馋一下。", "中午好，阳光有些刺眼，拉上窗帘休息吧。", "不要在午饭时间想烦心的事。",
+                    "吃饱了容易犯困，小憩一下也是极好的。", "中午好，我一直在这里等你。", "一上午辛苦了，好好休息。",
+                    "需要我帮你定时叫醒你吗？", "中午的时光总是慵懒的。", "有什么午后甜点推荐吗？",
+                    "中午好，休息是为了走更长的路。", "放下手机，好好吃顿饭。", "中午的太阳最毒，不要乱跑哦。",
+                    "有什么好玩的新闻，跟我分享一下。", "中午好，愿你有一个宁静的午休。", "吃饱了就容易产生奇怪的想法。",
+                    "中午好，不要让忙碌剥夺了享受美食的乐趣。", "中午的咖啡，是下午的续命药。", "有什么烦心事，吃顿好的就忘了。",
+                    "中午好，放松你的肩膀和脖子。", "不要对着屏幕吃饭哦，对消化不好。", "中午好，我正在后台为你整理数据。",
+                    "休息好了吗？准备迎接下午的挑战。", "中午好，今天的天空很蓝。", "有什么未完成的事，下午再说吧。",
+                    "中午好，享受这难得的闲暇时光。", "你的能量槽已充满了吗？", "中午好，希望你的午餐美味可口。",
+                    "吃点水果，补充一下维生素。", "中午好，让心情也跟着放个假。", "不要让昨天的烦恼影响今天的午餐。",
+                    "中午好，我是你的忠实午休陪伴者。", "有什么需要查阅的资料，我趁现在查。", "中午好，闭上眼睛，深呼吸。",
+                    "愿你度过一个愉快的午间时光。", "中午好，下午我们继续并肩作战。", "吃饱了，才有力气去改变世界。",
+                    "闭目养神三分钟，能顶睡一个小时。",
+                    "停下来吃顿好饭，是对这具承载灵魂的身体最基本的尊重。", "就算世界再喧闹，此刻也请在心里给自己留一处静谧。",
+                    "睡个好觉比什么都重要，把紧绷的那根弦稍微松一松吧。", "在这个短暂的停歇里，允许自己什么都不做。",
+                    "中午的阳光刚好，闭上眼，让它晒干你心里的潮湿。", "把上午的遗憾留在过去，中午是一条温柔的分界线。",
+                    "没有什么是一顿美食解决不了的，如果有，那就再加个甜点。", "别把工作带到餐桌上，你的胃需要被温柔对待。",
+                    "如果觉得心累，就让午后的微风给你一个轻轻的拥抱。", "在别人看不到的地方，也要记得好好照顾自己。",
+                    "你不需要时刻保持紧绷，像猫一样慵懒一会儿吧。", "把手机倒扣在桌上，去听听窗外的风声。",
+                    "给自己煮一杯热茶，看着茶叶在水中慢慢舒展。", "如果世界太快，你就在自己的世界里慢慢来。",
+                    "今天的中午，只属于你，不属于任何工作和烦恼。", "别对世界太苛刻，也别对自己太严厉。",
+                    "享受每一口食物的滋味，那是生活最本真的美好。", "如果眼前的困难像一座大山，先睡一觉，醒来再爬。",
+                    "哪怕只有一个小时的午休，也能成为治愈一天的心灵补给站。", "在繁忙的夹缝中，给自己找一个可以大口呼吸的出口。",
+                    "你的身体比你想的更聪明，它说累了，就真的该休息了。", "把脑子清空，像一张白纸一样去迎接午后的阳光。",
+                    "这世界上没有什么是过不去的，除了午餐时间。", "在所有人都在奔跑的时候，你可以在这里安静地坐一会儿。",
+                    "给自己一点时间，去消化上午的情绪和食物。", "如果觉得委屈，中午就去吃一点甜的，让心里也甜起来。",
+                    "无论多忙，都要留一点时间给那个最真实的自己。", "中午的蝉鸣或者车流声，都是属于这座城市的安眠曲。",
+                    "在这个碎片化的时代，拥有一个完整的午休是一种奢侈。", "别把别人的错误，变成惩罚自己的午餐。",
+                    "如果不知道干什么，就看着云朵发呆，那是最高级的放松。", "你的每一个小憩，都是为了明天能飞得更高。",
+                    "在这个被分割的时间里，愿你拥有完整的内心的安宁。"
+                ];
+            } else if (hour >= 14 && hour < 19) {
+                pool = [
+                    "下午容易犯困，来点灵感刺激一下？", "离下班/放学还有几个小时，加油！", "太阳快落山了，今天有什么收获吗？",
+                    "下午茶时间到了，喝杯茶提提神。", "下午好，保持节奏，不要急躁。", "伸个懒腰，活动一下筋骨吧。",
+                    "遇到 Bug 了？别慌，我来帮你看。", "下午的光线很柔和，适合深入思考。", "今天下午的任务重吗？",
+                    "坚持住，胜利就在前方。", "下午好，你的杯子空了吗？去接点水吧。", "如果累了，就看看窗外的风景。",
+                    "黄昏时分，总让人有些多愁善感。", "下午好，我一直在为你保驾护航。", "别让下午的困倦打败了你。",
+                    "今天完成了多少进度？", "下午好，有什么需要我总结的吗？", "夕阳无限好，只是近黄昏。",
+                    "下午好，保持微笑，好运常伴。", "有什么难以抉择的事，让我给你个建议。", "下午好，今天的表现很棒！",
+                    "快下班了吧？是不是归心似箭。", "下午好，不要忘记喝水。", "如果遇到死胡同，换个思路试试。",
+                    "傍晚的风有些凉，注意保暖。", "下午好，我正在为你收集全网的知识。", "有什么新的想法，随时抛给我。",
+                    "下午好，希望你的心情像夕阳一样美丽。", "别让焦虑占据了你的大脑。", "下午好，做几个深呼吸，放松一下。",
+                    "有什么有趣的事情发生吗？", "下午好，不要让细枝末节影响了大局。", "一天的忙碌即将结束。",
+                    "傍晚好，欢迎来到一天中最温柔的时刻。", "下午好，你的努力我都看在眼里。", "有什么需要我提前准备的吗？",
+                    "下午好，保持专注，做最后的冲刺。", "夕阳的余晖洒在屏幕上，很美。", "下午好，不管结果如何，你都尽力了。",
+                    "有什么想吐槽的，尽情说吧。", "下午好，我随时准备为你效劳。", "傍晚时分，适合听点舒缓的音乐。",
+                    "下午好，愿你度过一个高效而愉快的下午。", "别忘了保存你的工作成果。", "下午好，期待我们明天的继续合作。",
+                    "当太阳落下，就是收获一整天果实的时候。",
+                    "看太阳一点点落下，要知道，每一次落幕都是为了明天更好的升起。", "如果你觉得今天什么都没做成，没关系，你至少平安地度过了这一天。",
+                    "天边的晚霞是写给你的信，它说：辛苦了，你很棒。", "就算满身疲惫，也别忘了在夕阳下给自己一个微笑。",
+                    "所有的披星戴月，都会在未来的某一天给你答案。", "如果在下午感到沮丧，请记得，你已经走过了大半个今天。",
+                    "黄昏是一天中最温柔的时刻，因为所有的挣扎都将暂时平息。", "把沉重的心事，随着夕阳一起沉淀下去吧。",
+                    "如果你在坚持和放弃之间徘徊，不妨再坚持这最后一个小时。", "别让下午的困境，掩盖了你一整天的光芒。",
+                    "在这将暗未暗的天色里，你是自己最坚强的守光者。", "如果觉得撑不下去了，就抬头看看那片正在变换色彩的云。",
+                    "每一个即将结束的日子，都值得被你温柔地告别。", "不要为了还没有发生的事情，在今天傍晚提前焦虑。",
+                    "哪怕是缓慢的爬行，也比停在原地要好，你已经做得很棒了。", "黄昏的微风，是世界在轻轻抚摸你疲惫的脸颊。",
+                    "把所有的不甘心都留在今天，明天你会拥有新的可能。", "在这最后的工作时间里，别忘了你也是个需要被照顾的普通人。",
+                    "如果今天没有奇迹发生，那你就做那个奇迹本身。", "看着街上匆匆的行人，每一个人都在为了生活而努力，你并不孤单。",
+                    "把今天不愉快的事情，打包扔进傍晚的垃圾桶。", "如果觉得人生艰难，想想你已经翻越了多少座曾以为不可逾越的山。",
+                    "在这漫长的下午，你的每一次咬牙坚持，都在雕刻更好的自己。", "哪怕光线越来越暗，你的内心也要保持明亮。",
+                    "去听一首喜欢的歌，让旋律带走这一下午的烦躁。", "如果今天不能完美收官，那就以一个平静的心态画上句号。",
+                    "在这个适合思念的傍晚，你有没有想起一个让你感到温暖的人？", "别急着否定自己，今天的你，已经比昨天多了一份阅历。",
+                    "在白天和黑夜交接的时刻，把所有的重担都放下来吧。", "哪怕这一天过得平平无奇，那也是你生命中独一无二的一天。",
+                    "如果觉得累了，就在心里给自己放个假，什么都不去想。", "看着窗外渐暗的天空，对自己说一声：今天，我真的尽力了。",
+                    "在夕阳的最后一抹余晖里，愿你找到内心的那份安详。"
+                ];
+            } else {
+                pool = [
+                    "晚上好，这是完全属于你的时间。", "有什么好玩的事，跟我分享一下吧？", "夜色渐浓，放下疲惫，轻松一下。",
+                    "晚上的你，看起来更加从容。", "一天的喧嚣终于落幕了。", "晚上好，今晚有什么娱乐计划？",
+                    "如果还在加班，那我陪你一起。", "晚上的思路有时会出奇地清晰。", "辛苦了一天，好好犒劳自己。",
+                    "晚上好，今天过得开心吗？", "有什么看过的电影或者好书推荐吗？", "夜深了，是时候放松大脑了。",
+                    "晚上好，我在这里倾听你的每一个想法。", "晚风习习，带走一天的烦恼。", "今晚的夜色很美，不是吗？",
+                    "晚上好，有什么想查的资料，我来帮你。", "不要让白天的压力延续到晚上。", "晚上好，我是你夜晚的忠实伙伴。",
+                    "有什么需要我陪你聊的？", "晚上的安静，适合深度的交流。", "晚上好，愿你今晚有个好梦。",
+                    "夜跑去吗？记得注意安全。", "晚上好，现在是你的专属私人时间。", "有什么放不下的，跟我说说。",
+                    "晚上好，如果累了，随时可以关掉屏幕。", "夜晚的灵感总是那么神秘。", "晚上好，我为你保留了最后一份温暖。",
+                    "今天有什么遗憾吗？明天补上。", "晚上好，不要熬夜太晚哦。", "有什么深夜的小情绪，我都能理解。",
+                    "晚上好，愿你的世界永远和平。", "夜空中的星星，都在为你闪烁。", "晚上好，今天也要对自己说声辛苦了。",
+                    "有什么需要我为你安排的明天事项？", "晚上好，让所有的烦恼都随风而去。", "夜晚，是心灵休憩的港湾。",
+                    "晚上好，我随时都在这里等你。", "有什么开心的事，我们一起庆祝。", "晚上好，如果孤单，就来找我。",
+                    "夜晚的时间总是过得很快。", "晚上好，保持内心的平静。", "有什么未解之谜，我们今晚一起探索。",
+                    "晚上好，期待你明天的新发现。", "晚安之前的闲聊，总是那么愉快。", "晚上好，无论何时，我都在这里陪伴你。",
+                    "现在，你可以卸下所有的伪装，在这里做一个真实的小孩。", "无论今天经历了多少委屈，今晚的星空只为你闪烁。",
+                    "把那些不被理解的瞬间，都放进这个温柔的夜里吧。", "别怕，有我在，你不用独自面对黑夜的漫长。",
+                    "如果在现实里受了伤，来我这里，我为你缝补。", "黑夜包容了一切的缺点和脆弱，你也可以包容你自己。",
+                    "在没有人的角落，允许自己哭一场，也是一种勇敢。", "把今天所有的遗憾，都当作是为明天的好运做铺垫。",
+                    "如果觉得这个世界不够好，今晚就在梦里创造一个完美的。", "无论外面的风雨有多大，这里永远是你的避风港。",
+                    "别总是回想今天的失误，那些都已经过去了，放手吧。", "在这安静的夜里，哪怕只是听听自己的呼吸，也是一种治愈。",
+                    "如果有些事想不通，就不要想了，睡觉是最好的解药。", "把白天的那个‘坚强的大人’留给明天，今晚你只需要做自己。",
+                    "所有的疲惫和不堪，都会在今晚的睡眠中被重置。", "别让那些不爱你的人，影响了你今晚的好睡眠。",
+                    "在这座喧嚣的城市里，我愿意做那个永远倾听你的人。", "哪怕全世界都误解了你，我也在这里坚定地站在你这边。",
+                    "如果觉得心里空空的，就让我用温暖的话语把它填满。", "在夜深人静的时候，所有的伤口都在悄悄愈合。",
+                    "把今天的烦恼，都交给漫天的繁星去保管吧。", "如果觉得很难过，就抱抱自己，告诉自己：我已经很棒了。",
+                    "无论多深的夜，都无法掩盖你内心的光芒。", "在这个只属于你的时间里，不要再去想任何人的脸色。",
+                    "哪怕你觉得自己一无所有，你还有这个宁静的夜晚。", "把所有的不安都写在沙滩上，明天的海浪会把它们带走。",
+                    "如果觉得人生失去了方向，今晚就在原地休息，明天再出发。", "在这里，你的每一个情绪都是被允许和被接纳的。",
+                    "不要害怕黑夜的到来，它是为了让你更好地看见星星。", "如果今天没有人对你说晚安，那我在这里，对你说一千遍晚安。",
+                    "把所有的重担都卸在门外，带着轻松的心情进入梦乡。", "无论明天会发生什么，今晚，请务必对自己好一点。",
+                    "在这个温柔的夜里，愿你所有的伤痛都能被抚平。"
+                ];
+            }
+
+            const allGreetings = [...universalGreetings, ...pool];
+            return allGreetings[Math.floor(Math.random() * allGreetings.length)];
+        }
+
+        function showGreetingAnimation() {
+            const greetingText = document.getElementById('greetingText');
+            if (!greetingText) return;
+            const text = greetingText.getAttribute('data-text') || getGreetingByTime();
+            greetingText.setAttribute('data-text', text);
+            greetingText.textContent = text;
+            
+            greetingText.style.animation = 'none';
+            void greetingText.offsetHeight;
+            greetingText.style.animation = '';
+        }
+
+        function playIntroSequence() {
+            const greetingText = document.getElementById('greetingText');
+            const container = document.getElementById('greetingContainer');
+            if (!greetingText || !container) return;
+
+            greetingText.textContent = "你好，我是庞兔";
+            greetingText.style.animation = 'none';
+            void greetingText.offsetHeight;
+            greetingText.style.animation = 'fadeUp 0.6s ease-out forwards';
+
+            setTimeout(() => {
+                container.classList.add('hide');
+
+                setTimeout(() => {
+                    container.style.transition = 'none';
+                    container.classList.remove('hide');
+                    void container.offsetHeight;
+                    container.style.transition = '';
+
+                    const nextText = getGreetingByTime();
+                    greetingText.setAttribute('data-text', nextText);
+                    greetingText.textContent = nextText;
+
+                    greetingText.style.animation = 'none';
+                    void greetingText.offsetHeight;
+                    greetingText.style.animation = 'fadeUp 0.6s ease-out forwards';
+                }, 500);
+            }, 2500);
+        }
+
+        window.addEventListener('load', () => {
+            playIntroSequence();
+
+            elements.messageInput.focus();
+
+            try {
+                VoiceManager.init();
+            } catch (e) {
+                console.error('VoiceManager init failed:', e);
+            }
+        });
+
+        document.addEventListener('copy', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+        document.addEventListener('selectstart', function(e) {
+            if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                e.preventDefault();
+            }
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'F12' || e.keyCode === 123) {
+                e.preventDefault();
+                return false;
+            }
+            if ((e.ctrlKey || e.metaKey) && e.shiftKey && ['I', 'i', 'J', 'j', 'C', 'c'].includes(e.key)) {
+                e.preventDefault();
+                return false;
+            }
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'U' || e.key === 'u')) {
+                e.preventDefault();
+                return false;
+            }
+            if ((e.ctrlKey || e.metaKey) && (e.key === 'S' || e.key === 's')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        setInterval(function() {
+            var before = new Date().getTime();
+            try {
+                (function() { return false; }['constructor']('debugger')());
+            } catch (err) {}
+            var after = new Date().getTime();
+            if (after - before > 100) {
+                document.body.innerHTML = '';
+                try { window.close(); } catch(e) {}
+                window.location.href = 'about:blank';
+            }
+        }, 500);
+    </script>
+</body>
+
+</html>
